@@ -10,11 +10,13 @@
 --| 
 --| ---------------------------------------------------------------------------
 --|
---| FILENAME      : clock_divider_tb.vhd (TEST BENCH)
+--| FILENAME      : clock_divider.vhd
 --| AUTHOR(S)     : Capt Phillip Warner
 --| CREATED       : 03/2017
---| DESCRIPTION   : This file tests the generic clock divider.
---|
+--| DESCRIPTION   : This file implements a generic clock divider that uses a counter and comparator.
+--|					This provides more flexibility than simpler designs that use a bit from a 
+--|					clk bus (they only provide divisors of powers of 2).
+--|  
 --| DOCUMENTATION : None
 --|
 --+----------------------------------------------------------------------------
@@ -23,7 +25,7 @@
 --|
 --|    Libraries : ieee
 --|    Packages  : std_logic_1164, numeric_std, unisim
---|    Files     : clock_divider.vhd
+--|    Files     : None
 --|
 --+----------------------------------------------------------------------------
 --|
@@ -44,74 +46,52 @@
 --|    s_<signal name>          = state name
 --|
 --+----------------------------------------------------------------------------
-library ieee;
-  use ieee.std_logic_1164.all;
-  use ieee.numeric_std.all;
-  
-entity clock_divider_tb is
-end clock_divider_tb;
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use ieee.numeric_std.all;
 
-architecture test_bench of clock_divider_tb is 	
-  
-    component clock_divider is
-        generic ( constant k_DIV : natural := 2	); -- How many clk cycles until slow clock toggles
-                                                   -- Effectively, you divide the clk double this 
-                                                   -- number (e.g., k_DIV := 2 --> clock divider of 4)
-        port ( 	i_clk    : in std_logic;
-                i_reset  : in std_logic;		   -- asynchronous
-                o_clk    : out std_logic		   -- divided (slow) clock
-        );
-    end component clock_divider;
+entity clock_divider is
+	generic ( constant k_DIV : natural := 2	); -- How many clk cycles until slow clock toggles
+											   -- Effectively, you divide the clk double this 
+											   -- number (e.g., k_DIV := 2 --> clock divider of 4)
+	port ( 	i_clk    : in std_logic;
+			i_reset  : in std_logic;		   -- asynchronous
+			o_clk    : out std_logic		   -- divided (slow) clock
+	);
+end clock_divider;
 
-	-- Setup test clk (20 ns --> 50 MHz)
-	constant k_clk_period	: time 		:= 20 ns;
-	signal clk			 	: std_logic	:= '0';
-
-	signal reset, slow_clk	: std_logic	:= '0';
-	
-	-- Set clk divide amount here
-	constant k_clock_divs	: natural	:= 10;
+architecture countCompare of clock_divider is
+	signal f_count : natural := 0;
+	signal f_clk   : std_logic	:= '0';
 	
 begin
-	-- PORT MAPS ----------------------------------------
-
-	-- map ports for any component instances (port mapping is like wiring hardware)
-	uut_inst : clock_divider 
-	generic map ( k_DIV => k_clock_divs )
-	port map (
-		i_clk   => clk,
-		i_reset => reset,
-		o_clk	=> slow_clk
-	);
-
+	-- CONCURRENT STATEMENTS ----------------------------
+	
+	o_clk <= f_clk;
+	
 	
 	-- PROCESSES ----------------------------------------
 	
-	-- Clock Process ------------------------------------
-	clk_process : process
+	-- Clock count and divide Process -------------------
+	--   increment and compare f_count to k_DIV
+	--   rollover and toggle f_clk when count reaches k_DIV
+	countClock_proc : process(i_clk, i_reset)
 	begin
-		clk <= '0';
-		wait for k_clk_period/2;
-		
-		clk <= '1';
-		wait for k_clk_period/2;
-	end process clk_process;
-	-----------------------------------------------------	
+		if i_reset = '1' then
+			f_count <= 0;
+			f_clk	<= '0';
+		else
+			if rising_edge(i_clk) then			
+				if f_count = k_DIV - 1 then
+					f_count <= 0;
+					f_clk <= not f_clk;
+				else
+					f_count <= f_count + 1;
+				end if;
+			end if;
+		end if;
+	end process countClock_proc;
+	-----------------------------------------------------
 	
-	-- Test Plan Process --------------------------------
-	test_process : process 
-	begin
-		-- clock should have good initial state, so let it divide at least twice
-		wait for k_clk_period * k_clock_divs * 2;
-		
-		-- now hold it in reset to verify that works correctly
-		reset <= '1';
-		wait for k_clk_period * k_clock_divs * 2;
-		
-		-- let the clock divide for rest of sim
-		reset <= '0';		
-		wait;
-	end process;	
-	-----------------------------------------------------	
-	
-end test_bench;
+end countCompare;
+
