@@ -85,23 +85,40 @@ library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
  
-entity thunderbird_fsm is 
---  port(
-	
---  );
+entity thunderbird_fsm is
+    port (
+        i_clk, i_reset  : in    std_logic;
+        i_left, i_right : in    std_logic;
+        o_lights_L      : out   std_logic_vector(2 downto 0);
+        o_lights_R      : out   std_logic_vector(2 downto 0)
+    );
 end thunderbird_fsm;
 
 architecture thunderbird_fsm_arch of thunderbird_fsm is 
 
 -- CONSTANTS ------------------------------------------------------------------
-  
+      constant k_clk_period : time := 10 ns;
+      
 begin
 
 	-- CONCURRENT STATEMENTS --------------------------------------------------------	
-	
+	--| One-Hot State Encoding key
+    --| --------------------
+    --| State | Encoding
+    --| --------------------
+    --| OFF   | 10000000
+    --| ON    | 01000000
+    --| R1    | 00100000
+    --| R2    | 00010000
+    --| R3    | 00001000
+    --| L1    | 00000100
+    --| L2    | 00000010
+    --| L3    | 00000001
+    --| --------------------
     ---------------------------------------------------------------------------------
 	
 	-- PROCESSES --------------------------------------------------------------------
+        
     
 	-----------------------------------------------------					   
 				  
